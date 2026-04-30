@@ -1,6 +1,8 @@
 use crate::api::auth;
 use crate::error::AppError;
-use crate::pool::manager::{ProxyFilter, ProxyListQuery};
+use crate::pool::manager::{
+    deserialize_opt_f64, deserialize_opt_usize, ProxyFilter, ProxyListQuery,
+};
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
@@ -18,10 +20,12 @@ pub struct FetchQuery {
     pub google: bool,
     #[serde(default)]
     pub residential: bool,
+    #[serde(default, deserialize_with = "deserialize_opt_f64")]
     pub risk_max: Option<f64>,
     pub country: Option<String>,
     #[serde(rename = "type")]
     pub proxy_type: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
     pub count: Option<usize>,
     pub proxy_id: Option<String>,
 }
@@ -79,8 +83,18 @@ pub async fn list_all_proxies(
 ) -> Result<Json<serde_json::Value>, AppError> {
     auth::authenticate_request(&state, &headers, query.api_key.as_deref()).await?;
 
+    let list_query = ProxyListQuery {
+        page: query.page,
+        per_page: query.per_page,
+        search: query.search,
+        status: query.status,
+        proxy_type: query.proxy_type,
+        quality: query.quality,
+        sort: query.sort,
+        dir: query.dir,
+    };
     let stats = state.pool.stats();
-    let result = state.pool.list_proxies(&query.list);
+    let result = state.pool.list_proxies(&list_query);
     let proxy_list: Vec<serde_json::Value> = result.proxies.iter().map(proxy_to_json).collect();
 
     Ok(Json(json!({
@@ -102,8 +116,17 @@ pub async fn list_all_proxies(
 #[derive(Debug, Deserialize)]
 pub struct UserProxyListQuery {
     pub api_key: Option<String>,
-    #[serde(flatten)]
-    pub list: ProxyListQuery,
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
+    pub page: Option<usize>,
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
+    pub per_page: Option<usize>,
+    pub search: Option<String>,
+    pub status: Option<String>,
+    #[serde(rename = "type")]
+    pub proxy_type: Option<String>,
+    pub quality: Option<String>,
+    pub sort: Option<String>,
+    pub dir: Option<String>,
 }
 
 fn proxy_to_json(p: &crate::pool::manager::PoolProxy) -> serde_json::Value {

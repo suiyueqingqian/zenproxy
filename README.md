@@ -633,7 +633,7 @@ curl -X POST http://127.0.0.1:9090/subscriptions \
 curl -X POST http://127.0.0.1:9090/fetch \
   -H "Authorization: Bearer your-secret" \
   -d '{
-    "server": "https://proxy.zenapi.top",
+    "server": "https://zenproxy.top",
     "api_key": "your-zenproxy-api-key",
     "count": 100,
     "country": "US",
@@ -753,7 +753,7 @@ curl -X DELETE http://127.0.0.1:9090/bindings/all \
 # 1. 从 ZenProxy Server 获取 100 个代理
 curl -X POST http://127.0.0.1:9090/fetch \
   -H "Authorization: Bearer secret" \
-  -d '{"server": "https://proxy.zenapi.top", "api_key": "your-key", "count": 100}'
+  -d '{"server": "https://zenproxy.top", "api_key": "your-key", "count": 100}'
 
 # 2. 批量创建绑定 → 每个代理分配一个本地端口
 curl -X POST http://127.0.0.1:9090/bindings/batch \
@@ -794,7 +794,7 @@ curl -X POST http://127.0.0.1:9090/subscriptions/{sub-id}/refresh \
 curl -X POST http://127.0.0.1:9090/fetch \
   -H "Authorization: Bearer secret" \
   -d '{
-    "server": "https://proxy.zenapi.top",
+    "server": "https://zenproxy.top",
     "api_key": "your-key",
     "count": 200,
     "country": "US",

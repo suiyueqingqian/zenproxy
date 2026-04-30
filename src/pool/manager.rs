@@ -1,6 +1,7 @@
 use crate::db::{Database, ProxyQuality};
 use dashmap::DashMap;
 use rand::Rng;
+use serde::Deserialize;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -479,17 +480,21 @@ pub struct ProxyFilter {
     pub google: bool,
     #[serde(default)]
     pub residential: bool,
+    #[serde(default, deserialize_with = "deserialize_opt_f64")]
     pub risk_max: Option<f64>,
     pub country: Option<String>,
     #[serde(rename = "type")]
     pub proxy_type: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
     pub count: Option<usize>,
     pub proxy_id: Option<String>,
 }
 
 #[derive(Debug, Default, serde::Deserialize)]
 pub struct ProxyListQuery {
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
     pub page: Option<usize>,
+    #[serde(default, deserialize_with = "deserialize_opt_usize")]
     pub per_page: Option<usize>,
     pub search: Option<String>,
     pub status: Option<String>,
@@ -498,6 +503,28 @@ pub struct ProxyListQuery {
     pub quality: Option<String>,
     pub sort: Option<String>,
     pub dir: Option<String>,
+}
+
+pub fn deserialize_opt_usize<'de, D>(deserializer: D) -> Result<Option<usize>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<String>::deserialize(deserializer)?;
+    match value.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(raw) => raw.parse::<usize>().map(Some).map_err(serde::de::Error::custom),
+        None => Ok(None),
+    }
+}
+
+pub fn deserialize_opt_f64<'de, D>(deserializer: D) -> Result<Option<f64>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = Option::<String>::deserialize(deserializer)?;
+    match value.as_deref().map(str::trim).filter(|s| !s.is_empty()) {
+        Some(raw) => raw.parse::<f64>().map(Some).map_err(serde::de::Error::custom),
+        None => Ok(None),
+    }
 }
 
 pub struct ProxyListResult {

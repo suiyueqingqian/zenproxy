@@ -220,10 +220,10 @@ tr:hover td { background:var(--primary-soft); }
       </div>
       <div class="apikey-hint">
         <strong>获取代理（/api/fetch）：</strong>支持 Header 或 Query 两种认证方式<br>
-        <code>curl -H "Authorization: Bearer &lt;api_key&gt;" https://proxy.zenapi.top/api/fetch</code><br>
-        <code>curl "https://proxy.zenapi.top/api/fetch?api_key=&lt;key&gt;"</code><br><br>
+        <code>curl -H "Authorization: Bearer &lt;api_key&gt;" https://zenproxy.top/api/fetch</code><br>
+        <code>curl "https://zenproxy.top/api/fetch?api_key=&lt;key&gt;"</code><br><br>
         <strong>请求转发（/api/relay）：</strong>仅支持 Query 方式认证，Header 和 Cookie 会原样转发给目标<br>
-        <code>curl "https://proxy.zenapi.top/api/relay?api_key=&lt;key&gt;&amp;url=https://httpbin.org/ip&amp;country=US"</code>
+        <code>curl "https://zenproxy.top/api/relay?api_key=&lt;key&gt;&amp;url=https://httpbin.org/ip&amp;country=US"</code>
       </div>
     </div>
   </div>
@@ -484,7 +484,6 @@ async function loadProxies() {
   if (!currentUser) return;
   try {
     const params = new URLSearchParams({
-      api_key: currentUser.api_key,
       page: String(currentPage),
       per_page: String(pageSize),
       sort: sortField,
@@ -497,6 +496,16 @@ async function loadProxies() {
     if (status) params.set('status', status);
     if (quality) params.set('quality', quality);
     const r = await fetch('/api/proxies?' + params.toString());
+    if (r.status === 401) {
+      currentUser = null;
+      document.getElementById('login-overlay').style.display = '';
+      document.getElementById('app').style.display = 'none';
+      return;
+    }
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(text || ('HTTP ' + r.status));
+    }
     const d = await r.json();
     if (!d) return;
     document.getElementById('stat-total').textContent = d.total ?? 0;
@@ -510,7 +519,13 @@ async function loadProxies() {
     allProxies = d.proxies || [];
     proxyTotal = d.filtered_total ?? d.total ?? 0;
     renderProxies();
-  } catch(e) {}
+  } catch(e) {
+    console.error('Failed to load proxies:', e);
+    toast('加载代理数据失败');
+    allProxies = [];
+    proxyTotal = 0;
+    renderProxies();
+  }
 }
 
 function renderProxies() {
@@ -591,7 +606,6 @@ function applyProxyFilters() {
 async function fetchProxy() {
   if (!currentUser) return;
   const params = new URLSearchParams();
-  params.set('api_key', currentUser.api_key);
   if (document.getElementById('fetch-chatgpt').checked) params.set('chatgpt', 'true');
   if (document.getElementById('fetch-google').checked) params.set('google', 'true');
   if (document.getElementById('fetch-residential').checked) params.set('residential', 'true');
@@ -606,6 +620,13 @@ async function fetchProxy() {
     const text = await r.text();
     const box = document.getElementById('fetch-result');
     box.style.display = 'block';
+    if (r.status === 401) {
+      box.textContent = '未登录或登录已过期';
+      currentUser = null;
+      document.getElementById('login-overlay').style.display = '';
+      document.getElementById('app').style.display = 'none';
+      return;
+    }
     let d;
     try { d = JSON.parse(text); } catch(_) { box.textContent = '错误: ' + text; return; }
     box.textContent = JSON.stringify(d, null, 2);

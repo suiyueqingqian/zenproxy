@@ -1,6 +1,6 @@
 use crate::api::auth;
 use crate::error::AppError;
-use crate::pool::manager::{PoolProxy, ProxyFilter};
+use crate::pool::manager::{deserialize_opt_f64, PoolProxy, ProxyFilter};
 use crate::AppState;
 use axum::extract::{Query, State};
 use axum::http::HeaderMap;
@@ -25,6 +25,7 @@ pub struct RelayParams {
     pub google: bool,
     #[serde(default)]
     pub residential: bool,
+    #[serde(default, deserialize_with = "deserialize_opt_f64")]
     pub risk_max: Option<f64>,
     pub country: Option<String>,
     #[serde(rename = "type")]
